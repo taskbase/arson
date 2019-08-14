@@ -119,7 +119,10 @@ class KotlinUtilsTest {
         assertTrue(KotlinReflectionUtils.containsIllegalNullValues(faultyObject))
         assertFalse(KotlinReflectionUtils.containsIllegalNullValues(fixedObject))
     }
+
+
 }
+
 
 data class NonNullableType(
     val b: Int,

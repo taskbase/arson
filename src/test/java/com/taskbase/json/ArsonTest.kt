@@ -1,23 +1,38 @@
 package com.taskbase.json
 
 import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 
 class ArsonTest {
 
-    private val jsonSerDe = Arson(gson = Gson())
-
     @Test
-    fun testParseJson() {
-        val o = jsonSerDe.fromJson("{'c':1}", SomeTestClass::class.java)
-        assertEquals(SomeTestClass(c = 1), o)
+    fun testEnumDeserialization() {
+        val json = "{'name':'Jim', 'hairColor':'3'}"
+
+        // Gson deserializes the value to null
+        val p1 = Gson().fromJson(json, Person::class.java)
+        assertNull(p1.hairColor)
+
+        // The wrapper replaces null with the default value
+        val p2 = Arson(gson = Gson()).fromJson(json, Person::class.java)
+        assertEquals(Color.NONE, p2.hairColor)
     }
 }
 
-data class SomeTestClass(
-    val s: String? = "default",
-    val e: List<String> = listOf("a", "b", "c"),
-    val c: Int
+data class Person(
+    val name: String = "",
+    val age: Int = 0,
+    val hairColor: Color = Color.NONE
 )
+
+enum class Color {
+    @SerializedName("1")
+    BROWN,
+    @SerializedName("2")
+    BLONDE,
+    NONE
+}
