@@ -1,4 +1,4 @@
-package com.taskbase.json
+package com.taskbase.arson
 
 import com.google.gson.Gson
 import com.google.gson.JsonElement

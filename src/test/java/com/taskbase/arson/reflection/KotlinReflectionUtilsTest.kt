@@ -1,4 +1,4 @@
-package com.taskbase.reflection
+package com.taskbase.arson.reflection
 
 import com.google.gson.Gson
 import org.junit.Assert.assertEquals
