@@ -2,7 +2,12 @@ package com.taskbase.arson.reflection
 
 import java.util.*
 import java.util.logging.Logger
-import kotlin.reflect.*
+import kotlin.collections.Map.Entry
+import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
+import kotlin.reflect.KParameter
+import kotlin.reflect.KProperty1
+import kotlin.reflect.KVisibility.PUBLIC
 import kotlin.reflect.full.declaredMemberProperties
 
 object KotlinReflectionUtils {
@@ -18,7 +23,7 @@ object KotlinReflectionUtils {
         if (anObject != null) {
             when (anObject) {
                 is Map<*, *> -> {
-                    anObject.entries.forEach { entry: Map.Entry<*, *> ->
+                    anObject.entries.forEach { entry: Entry<*, *> ->
                         if (entry.key == null
                             || entry.value == null
                             || containsIllegalNullValues(entry.key)
@@ -41,16 +46,14 @@ object KotlinReflectionUtils {
                     }
                 }
                 else -> (anObject as Any?)!!::class.declaredMemberProperties
-                    .filter { it.visibility == KVisibility.PUBLIC }
+                    .filter { it.visibility == PUBLIC }
                     .forEach { member: KProperty1<*, *> ->
-                        if (member.getter.visibility == KVisibility.PUBLIC) {
-                            val memberValue = member.getter.call(anObject)
-                            if (!member.returnType.isMarkedNullable && memberValue == null
-                                || containsIllegalNullValues(memberValue)
-                            ) {
-                                log.warning("Member ${member.name} is illegally null!")
-                                return true
-                            }
+                        val memberValue = member.getter.call(anObject)
+                        if (!member.returnType.isMarkedNullable && memberValue == null
+                            || containsIllegalNullValues(memberValue)
+                        ) {
+                            log.warning("Member ${member.name} is illegally null!")
+                            return true
                         }
                     }
             }
@@ -67,7 +70,7 @@ object KotlinReflectionUtils {
             return when (anObject) {
                 is Map<*, *> -> {
                     anObject
-                        .map { element: Map.Entry<*, *> ->
+                        .map { element: Entry<*, *> ->
                             Pair(addDefaultValues(element.key), addDefaultValues(element.value))
                         }.toMap()
                 }
@@ -77,7 +80,7 @@ object KotlinReflectionUtils {
                 is Array<*> -> {
                     // Arrays are a special case. We have to be careful to not lose the type information.
                     val clonedArray = anObject.clone()
-                    (0 until clonedArray.size).forEach { i ->
+                    (0 until anObject.size).forEach { i ->
                         Arrays.fill(clonedArray, i, i + 1, addDefaultValues(anObject[i]))
                     }
                     clonedArray
@@ -89,7 +92,8 @@ object KotlinReflectionUtils {
                         } else {
                             // Select the constructor
                             val constructor: KFunction<Any>? = anyObject::class.constructors
-                                .firstOrNull { constructor -> constructor.visibility == KVisibility.PUBLIC }
+                                .filter { c -> c.parameters.size == anyObject::class.declaredMemberProperties.size }
+                                .firstOrNull { constructor: KFunction<Any> -> constructor.visibility == PUBLIC }
                             if (constructor == null) {
                                 anyObject
                             } else {
@@ -99,7 +103,7 @@ object KotlinReflectionUtils {
                                     constructor.parameters.map { Pair(it.name!!, it) }.toMap()
 
                                 val params: Map<KParameter, Any?> = anyObject::class.declaredMemberProperties
-                                    .filter { it.visibility == KVisibility.PUBLIC }
+                                    .filter { it.visibility == PUBLIC }
                                     .mapNotNull { member: KProperty1<out Any, *> ->
                                         val kParam = kParameters[member.name]
                                         if (kParam != null) {
@@ -130,5 +134,4 @@ object KotlinReflectionUtils {
     private fun isOfPrimitiveType(o: Any): Boolean = primitiveTypes.any { it.isInstance(o) }
 
     private val primitiveTypes: Set<KClass<*>> = setOf(Number::class, String::class, Boolean::class, Char::class)
-
 }

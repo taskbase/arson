@@ -7,6 +7,7 @@ import com.google.gson.stream.JsonWriter
 import com.taskbase.arson.reflection.KotlinReflectionUtils
 import java.io.Reader
 import java.lang.reflect.Type
+import java.util.logging.Logger
 
 /**
  * Wrapper for the Json serialization library Gson that performs additional fixes and checks on the deserialized objects.
@@ -14,7 +15,8 @@ import java.lang.reflect.Type
 class Arson(
     private val gson: Gson,
     private val enhancers: List<(o: Any?) -> Any?> = listOf(KotlinReflectionUtils::addDefaultValues),
-    private val checks: List<(T: Any?) -> Boolean> = listOf(KotlinReflectionUtils::containsIllegalNullValues)
+    private val checks: List<(T: Any?) -> Boolean> = listOf(KotlinReflectionUtils::containsIllegalNullValues),
+    private val log: Logger = Logger.getLogger(Arson::class.java.name)
 ) {
     fun <T> fromJson(json: String, classOfT: Class<T>): T = check(enhance(gson.fromJson<T>(json, classOfT)))
     fun <T> fromJson(json: String, typeOfT: Type): T = check(enhance(gson.fromJson(json, typeOfT)))
@@ -44,6 +46,7 @@ class Arson(
 
     private fun <T> check(anObject: T): T {
         return if (checks.any { check -> check.invoke(anObject) }) {
+            log.warning("Object:\n${gson.toJson(anObject)}\nContains illegal null values.")
             throw IllegalArgumentException("Object:\n${gson.toJson(anObject)}\nContains illegal null values.")
         } else {
             anObject
